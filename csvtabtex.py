@@ -1,7 +1,11 @@
 #!/usr/bin/python
 import os,sys
 import argparse
-def basictab(caption=r'test',pos=r'|c|c|',content=r'test&test\\\hline',label=r'testlabel'):
+def basictab(content,pos,caption=None,label=None):
+	if caption==None:
+		caption=r'test'
+	if label==None:
+		label=r'test'
 	tabletex=r'''\begin{table}[ht]
 \caption{%s}
 \centering
@@ -15,6 +19,7 @@ def basictab(caption=r'test',pos=r'|c|c|',content=r'test&test\\\hline',label=r't
 	return tabletex
 
 def csv2lists(filename):
+	print 'filename is',filename
 	rr=open(filename,'rU').read()
 	t1=[l.split(',') for l in rr.split('\n') if l]
 	content=''
@@ -30,19 +35,53 @@ def non_zero_file(filename):
 	size=0
 	try:
 		size=os.stat(filename).st_size
+			
 	except:
 		msg = "%s is not a non-zero file" % filename
+		raise argparse.ArgumentTypeError(msg)
+	if os.path.splitext(filename)[-1]!='.csv':
+		msg = "%s extension is not .csv" % filename
 		raise argparse.ArgumentTypeError(msg)
 	return filename
 
 if __name__=="__main__":
 
 	parser = argparse.ArgumentParser()
-	parser.add_argument("input",help="input csv file, csvtabtex convert it to tex",type=non_zero_file)
-	parser.add_argument('-o','--output',help="output tex file, if not given, use stdout") 
+	parser.add_argument("input",help="input .csv file, csvtabtex convert it to tex",type=non_zero_file)
+	parser.add_argument('-o','--output',help="output .tex file, if not given, use input file with changed extension") 
+	parser.add_argument('-f','--force',help="force overwrite output .tex file if existed")
 	args=parser.parse_args()
 	print args.input
-	
-	file='/tmp/t2.csv'
-	file=args.input
-	print basictab(**csv2lists(file))
+	print args.output	
+	csvin=args.input
+	if args.output==None:
+		
+		texout=os.path.splitext(csvin)[0]+'.tex'
+	elif args.output=='stdout':
+		texout=None
+	else:	
+		texout=args.output
+	tex_str=basictab(**csv2lists(csvin))
+	if texout==None:
+		print tex_str
+	else:
+		if not args.force:
+			if os.path.exists(tex_str):
+				print 'output file %s exist, Overwrite (o) ? Append (a)? Cancel (any other char)?'%tex_str
+				response=sys.stdin.read(1)
+				if response=='o' or response=='O':
+					fwrite=open(texout,'w')
+				elif response=='a' or response=='A':
+					fwrite=open(texout,'a')
+				else: 
+					fwrite==None
+			else:
+				fwrite=open(texout,'w')
+		else:
+			fwrite=open(texout,'a')
+		if fwrite:
+			fwrite.write(tex_str)
+			print 'write to %s'%texout
+			fwrite.close()			
+
+
